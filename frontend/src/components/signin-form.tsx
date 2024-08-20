@@ -59,7 +59,7 @@ export function SigninForm() {
         Cookies.set("token", token, { expires: 1 }); // Expires in 7 days
 
         // Redirect to the home page
-        router.push("/");
+        router.push("/home");
       }
     } catch (err) {
       setError("Invalid email or password.");

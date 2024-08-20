@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"backend/pkg/models"
+	"encoding/json"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log"
 	"net/http"
 	"time"
 )
@@ -40,23 +42,35 @@ func HandleWebSocket(c echo.Context, dbInstance *mongo.Collection) error {
 	// Infinite loop to continuously listen for messages
 	for {
 		var msg models.Message
-		// Read the message from WebSocket
-		err := ws.ReadJSON(&msg)
+		_, rawMsg, err := ws.ReadMessage()
 		if err != nil {
-			// If there's an error, break the loop
+			log.Println("Error reading message from WebSocket:", err)
 			break
 		}
 
+		// Log the raw JSON message
+		log.Printf("Raw JSON message: %s\n", rawMsg)
+
+		// Unmarshal the raw JSON into the models.Message struct
+		err = json.Unmarshal(rawMsg, &msg)
+		if err != nil {
+			log.Println("Error unmarshalling JSON:", err)
+			continue
+		}
+
+		// Log the received message
+		log.Printf("Received message: %+v\n", msg)
+
 		// Add metadata to the message
 		msg.ID = primitive.NewObjectID()
+		msg.CreatedAt = time.Now()
 		msg.Username = username
 		msg.RoomName = roomName
-		msg.CreatedAt = time.Now()
 
 		// Store the message in MongoDB
 		_, err = dbInstance.InsertOne(c.Request().Context(), msg)
 		if err != nil {
-			// Log or handle the error as needed
+			log.Println("Error inserting message into MongoDB:", err)
 			break
 		}
 
@@ -65,6 +79,7 @@ func HandleWebSocket(c echo.Context, dbInstance *mongo.Collection) error {
 	}
 	return nil
 }
+
 func CreateNewRoom(c echo.Context, dbInstance *mongo.Collection) error {
 	// Extract the username from the context (assuming it's set by middleware)
 	username := c.Get("username").(string)
@@ -92,7 +107,7 @@ func CreateNewRoom(c echo.Context, dbInstance *mongo.Collection) error {
 }
 
 func GetMessagesInRoom(c echo.Context, dbInstance *mongo.Collection) error {
-	roomName := c.QueryParam("room_name")
+	roomName := c.Param("room_name")
 	if roomName == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": "Room name is required",

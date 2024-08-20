@@ -22,7 +22,7 @@ type Message struct {
 	ID        primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	Username  string             `json:"username" bson:"username" binding:"required"`
 	RoomName  string             `json:"room_name" bson:"room_name" binding:"required"`
-	Message   string             `json:"message" bson:"message" binding:"required"`
+	Message   string             `json:"content" bson:"content" binding:"required"`
 	CreatedAt time.Time          `json:"created_at" bson:"created_at"`
 }
 
